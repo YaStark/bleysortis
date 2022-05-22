@@ -7,9 +7,9 @@ namespace Bleysortis.Main
 {
     public class Cell : BaseMeshObject
     {
-        private const float LEVEL_STEP = 0.1f;
+        private const float LEVEL_STEP = 0.25f;
         private const float INNER_AREA_RATIO = 0.8f;
-        private const float NOIZE_LEVEL = 0.65f;
+        private const float NOIZE_LEVEL = 0.85f;
 
         private static readonly Random _rnd = new Random();
 

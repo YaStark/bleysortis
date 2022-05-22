@@ -15,26 +15,18 @@ namespace Bleysortis.Main
         private readonly Dictionary<BaseLightSource, int> _lightSources = new();
 
         private bool _mouseDownLeft;
-        private bool _mouseDownRight;
         private Point _mouseCoordinates;
-        private PointF _cameraPos;
-        private PointF _angleDeg;
-        private float _scale = 5;
 
         private Vector3 _cam00;
         private Vector3 _cam01;
         private Vector3 _cam10;
-        private Vector3 _cam11;
 
         private Game _game = new Game();
-        private Matrix4 _projectionMatrix;
+        private Camera _camera = new Camera(2, -4, 5).SetupScale(2, 20);
 
         protected override void OnLoad(EventArgs e)
         {
-            _projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(
-                   MathHelper.DegreesToRadians(VIEW_ANGLE_DEG), Width * 1f / Height, 0.5f, 100.0f);
-
-            _cameraPos = new PointF(2, -4);
+            _camera.SetViewport(Width, Height, VIEW_ANGLE_DEG);
             GL.ClearColor(0.2f, 0.3f, 0.3f, 1f);
             GL.ShadeModel(ShadingModel.Smooth);
 
@@ -57,22 +49,19 @@ namespace Bleysortis.Main
 
         protected override void OnMouseWheel(MouseWheelEventArgs e)
         {
-            _scale -= e.Delta * 0.15f;
-            _scale = Math.Max(2f, _scale);
+            _camera.SetScale(_camera.Scale - e.Delta * 0.15f);
             base.OnMouseWheel(e);
         }
 
         protected override void OnMouseDown(MouseButtonEventArgs e)
         {
             _mouseDownLeft = e.Mouse.LeftButton == ButtonState.Pressed;
-            _mouseDownRight = e.Mouse.RightButton == ButtonState.Pressed;
             base.OnMouseDown(e);
         }
 
         protected override void OnMouseUp(MouseButtonEventArgs e)
         {
             _mouseDownLeft = e.Mouse.LeftButton == ButtonState.Pressed;
-            _mouseDownRight = e.Mouse.RightButton == ButtonState.Pressed;
             base.OnMouseUp(e);
         }
 
@@ -83,14 +72,7 @@ namespace Bleysortis.Main
 
             if (_mouseDownLeft)
             {
-                _cameraPos.X += dfx * _scale;
-                _cameraPos.Y -= dfy * _scale;
-            }
-
-            if(_mouseDownRight)
-            {
-                _angleDeg.X = TrimDegree(_angleDeg.X + (float)dfx * 360f);
-                _angleDeg.Y = TrimDegree(_angleDeg.Y + (float)dfy * 360f);
+                _camera.Offset(dfx, -dfy);
             }
 
             _mouseCoordinates = e.Position;
@@ -104,26 +86,16 @@ namespace Bleysortis.Main
             GL.PolygonMode(MaterialFace.Front, PolygonMode.Fill);
 
             GL.MatrixMode(MatrixMode.Projection);
-            GL.LoadMatrix(ref _projectionMatrix);
+            var projMx = _camera.GetProjectionMatrix();
+            GL.LoadMatrix(ref projMx);
 
             GL.MatrixMode(MatrixMode.Modelview);
-            var eye = new Vector3(_cameraPos.X, _cameraPos.Y, _scale);
-            var eyeTarget = new Vector3(_cameraPos.X, _cameraPos.Y + 3, 0);
-            var cameraMatrix = Matrix4.LookAt(eye, eyeTarget, new Vector3(0, 0, 1));
-            GL.LoadMatrix(ref cameraMatrix);
+            var cameraMx = _camera.GetCameraMatrix();
+            GL.LoadMatrix(ref cameraMx);
 
-            var len = MathF.Tan(MathHelper.DegreesToRadians(VIEW_ANGLE_DEG / 2f));
-            var len2 = len * Width / Height;
-            Vector3 forward = (eyeTarget - eye).Normalized();
-            Vector3 left = Vector3.Cross(new Vector3(0, 0, 1), forward).Normalized() * len2;
-            Vector3 right = -left;
-            Vector3 up = Vector3.Cross(forward, left).Normalized() * len;
-            Vector3 down = -up;
-
-            _cam00 = new Ray(eye, forward + left + up).IntersectWithZ();
-            _cam01 = new Ray(eye, forward + right + up).IntersectWithZ();
-            _cam10 = new Ray(eye, forward + left + down).IntersectWithZ();
-            _cam11 = new Ray(eye, forward + right + down).IntersectWithZ();
+            _cam00 = _camera.GetRay(0, 0).IntersectWithZ();
+            _cam01 = _camera.GetRay(Width - 1, 0).IntersectWithZ();
+            _cam10 = _camera.GetRay(0, Height - 1).IntersectWithZ();
 
             foreach (var item in _game.EnumerateObjects())
             {
@@ -131,23 +103,13 @@ namespace Bleysortis.Main
             }
 
             SwapBuffers();
-
             base.OnRenderFrame(e);
-        }
-
-        private Vector3 Raycast(Matrix4 rev, int screenX, int screenY)
-        {
-            var vec = new Vector4(screenX * 2f / Width - 1, 1 - screenY * 2f / Height, 0, 1);
-            var ws = rev * vec;
-            return new Vector3(ws.X / ws.W, ws.Y / ws.W, ws.Z / ws.W);
         }
 
         protected override void OnResize(EventArgs e)
         {
             GL.Viewport(0, 0, Width, Height);
-            _projectionMatrix = Matrix4.CreatePerspectiveFieldOfView(
-                   MathHelper.DegreesToRadians(VIEW_ANGLE_DEG), Width * 1f / Height, 0.5f, 100.0f);
-
+            _camera.SetViewport(Width, Height, VIEW_ANGLE_DEG);
             base.OnResize(e);
         }
 
@@ -155,13 +117,6 @@ namespace Bleysortis.Main
         {
             base.OnUnload(e);
             _game.Dispose();
-        }
-
-        private static float TrimDegree(float value)
-        {
-            if (value < 0) return TrimDegree(value + 360);
-            if (value > 360) return TrimDegree(value - 360);
-            return value;
         }
 
         private void Render(BaseObject obj, Matrix3? parentMatrix = null)
@@ -205,31 +160,13 @@ namespace Bleysortis.Main
             if (mesh == null) return;
 
             GL.Begin(PrimitiveType.Triangles);
-            GL.Color3(Color.White);
-
             for (int i = 0; i < mesh.Length; i++)
             {
                 var triangle = mesh[i];
                 for (int j = 0; j < triangle.Points.Length; j++)
                 {
-                    if (triangle.Normales.Length == 1)
-                    {
-                        GL.Normal3(triangle.Normales[0]);
-                    }
-                    else
-                    {
-                        GL.Normal3(triangle.Normales[j]);
-                    }
-
-                    if(triangle.Colors.Length == 1)
-                    {
-                        GL.Color3(triangle.Colors[0]);
-                    }
-                    else
-                    {
-                        GL.Color3(triangle.Colors[j]);
-                    }
-
+                    triangle.GetNormale(j).DoIfNotNull(nor => GL.Normal3(nor));
+                    triangle.GetColor(j).DoIfNotNull(color => GL.Color3(color));
                     GL.Vertex3(triangle.Points[j]);
                 }
             }
@@ -252,16 +189,13 @@ namespace Bleysortis.Main
 
             var cap = (EnableCap)_lightSources[light];
             var name = (LightName)_lightSources[light];
-            if (light.Enabled)
-            {
-                GL.Enable(cap);
-            } 
-            else
+            if (!light.Enabled)
             {
                 GL.Disable(cap);
                 return;
             }
 
+            GL.Enable(cap);
             var center = Vector3.Transform(parentMatrix, light.Center);
             GL.Light(name, LightParameter.Position, new Vector4(center, 1));
             GL.Light(name, LightParameter.ConstantAttenuation, light.Attenuation);

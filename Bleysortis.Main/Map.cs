@@ -15,8 +15,8 @@ namespace Bleysortis.Main
         {
             int w = 250;
             int h = 250;
-            int min = -10;
-            int max = 10;
+            int min = -5;
+            int max = 5;
             int zero = 0;
             int delta = max - min;
             double landscapeFreq = w / 3;

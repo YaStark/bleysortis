@@ -27,6 +27,18 @@ namespace Bleysortis.Main
             return this;
         }
 
+        public Color? GetColor(int i) 
+        {
+            if (i < 0 || i >= Colors.Length || Colors == null) return null;
+            return Colors.Length == 1 ? Colors[0] : Colors[i];
+        }
+
+        public Vector3? GetNormale(int i)
+        {
+            if (i < 0 || i >= Normales.Length || Normales == null) return null;
+            return Normales.Length == 1 ? Normales[0] : Normales[i];
+        }
+
         public Triangle SetColors(Color color1, Color color2, Color color3)
         {
             Colors = new[] { color1, color2, color3 };
