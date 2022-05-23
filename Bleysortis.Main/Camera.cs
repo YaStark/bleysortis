@@ -10,6 +10,7 @@ namespace Bleysortis.Main
         private Vector3 _eye;
         private Vector3 _eyeTarget;
         private Matrix4 _cameraMatrix;
+
         private Matrix4 _projectionMatrix;
         private Vector3 _forward;
         private Vector3 _left;
@@ -31,6 +32,7 @@ namespace Bleysortis.Main
         {
             Scale = scale;
             RecalcPosition();
+            RecalcViewport();
             return this;
         }
 
@@ -43,7 +45,7 @@ namespace Bleysortis.Main
 
         public void Offset(float dx, float dy)
         {
-            Position = new PointF(Position.X + dx * Scale, Position.Y + dy * Scale);
+            Position = new PointF(Position.X + dx, Position.Y + dy);
             RecalcPosition();
         }
 

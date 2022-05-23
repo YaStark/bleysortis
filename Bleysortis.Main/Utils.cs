@@ -4,7 +4,7 @@ namespace Bleysortis.Main
 {
     public static class Utils
     {
-        public static void DoIfNotNull<T>(this Nullable<T> item, Action<T> action)
+        public static void DoIfNotNull<T>(this T? item, Action<T> action)
             where T : struct
         {
             if (item.HasValue)

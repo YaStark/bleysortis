@@ -10,7 +10,9 @@ namespace Bleysortis.Main
         private const float LEVEL_STEP = 0.25f;
         private const float INNER_AREA_RATIO = 0.8f;
         private const float NOIZE_LEVEL = 0.85f;
+        private const float WATER_LEVEL = 0.65f;
 
+        private static readonly Color _waterColor = Color.FromArgb(128, 100, 100, 255);
         private static readonly Random _rnd = new Random();
 
         private readonly Dictionary<HexDirection, Cell> _neighbours = new();
@@ -24,6 +26,8 @@ namespace Bleysortis.Main
             get { return _level; } 
             set { _level = value; Center = new Vector3(Center.X, Center.Y, Z);  } 
         }
+
+        public int WaterLevel { get; set; } = 0;
 
         public Cell(GroundType groundType) 
         {
@@ -144,12 +148,80 @@ namespace Bleysortis.Main
                 }
             }
 
+            if(HasWater())
+            {
+                triangles.AddRange(GetWater(WaterLevel - Level - 1 + WATER_LEVEL));
+            }
+
             return triangles.ToArray();
+        }
+
+        private IEnumerable<Triangle> GetWater(float level)
+        {
+            const float RAD = 0.5f;
+            var z = level * LEVEL_STEP;
+            float delta2 = MathF.PI / 6;
+            var pti0 = new Vector3(0, 0, z);
+            var ptix = new Vector3(RAD * MathF.Cos(-delta2), RAD * MathF.Sin(-delta2), z);
+            var pti1 = ptix;
+
+            for (int i = 0; i < 6; i++)
+            {
+                float rad = RAD;
+                float alpha = i * delta2 * 2;
+                var pti2 = i == 5
+                    ? ptix
+                    : new Vector3(rad * MathF.Cos(alpha + delta2), rad * MathF.Sin(alpha + delta2), z);
+
+                var direction = HexDirectionExt.ByAndleDeg((int)MathHelper.RadiansToDegrees(alpha));
+                yield return new Triangle(pti0, pti1, pti2)
+                    .SetColor(_waterColor)
+                    .SetDefaultNormale();
+
+                var cell1 = GetNeighbour(direction);
+                if (cell1?.HasWater() == false)
+                {
+                    var triangles1 = cell1._triangles[direction.Opposite()];
+                    var tri1Offset = Center - cell1.Center;
+                    var start1 = triangles1.First().Points.First() - tri1Offset;
+                    start1.Z = z;
+                    var end1 = triangles1.Last().Points.Last() - tri1Offset;
+                    end1.Z = z;
+
+                    yield return new Triangle(pti1, start1, pti2)
+                        .SetColor(_waterColor)
+                        .SetDefaultNormale();
+                    
+                    yield return new Triangle(start1, pti2, end1)
+                        .SetColor(_waterColor)
+                        .SetDefaultNormale();
+
+                    var cell2 = GetNeighbour(direction.Next());
+                    if (cell2?.HasWater() == false)
+                    {
+                        var triangles2 = cell2._triangles[direction.Opposite()];
+                        var tri2Offset = Center - cell2.Center;
+                        var start2 = triangles2.First().Points.First() - tri2Offset;
+                        start2.Z = z;
+
+                        yield return new Triangle(pti2, start1, start2)
+                            .SetColor(_waterColor)
+                            .SetDefaultNormale();
+                    }
+                }
+
+                pti1 = pti2;
+            }
         }
 
         private static int GetStepsCount(Cell cell0, Cell cell1)
         {
             return Math.Abs(cell0.Level - cell1.Level);
+        }
+
+        private bool HasWater()
+        {
+            return Level < WaterLevel;
         }
 
         private static IEnumerable<Triangle> GetBevel(

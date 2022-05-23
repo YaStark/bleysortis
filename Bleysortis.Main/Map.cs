@@ -1,5 +1,4 @@
 ﻿using Bleysortis.Main.Objects;
-using OpenTK;
 using System;
 using System.Collections.Generic;
 
@@ -13,8 +12,8 @@ namespace Bleysortis.Main
 
         public Map()
         {
-            int w = 250;
-            int h = 250;
+            int w = 50;
+            int h = 50;
             int min = -5;
             int max = 5;
             int zero = 0;
@@ -39,32 +38,7 @@ namespace Bleysortis.Main
                 }
             }
 
-            for (int i = 0; i < w; i++)
-            {
-                for (int j = 0; j < h; j++)
-                {
-                    var cell = _cellsField[i, j];
-                    if (j < h - 1)
-                    {
-                        int i0 = (j % 2 == 0 ? i + 1 : i);
-                        if(i0 < w)
-                        {
-                            cell.SetNeighbour(HexDirection.NE, _cellsField[i0, j + 1]);
-                        }
-
-                        int i1 = (j % 2 == 0 ? i : i - 1);
-                        if (i1 >= 0)
-                        {
-                            cell.SetNeighbour(HexDirection.NW, _cellsField[i1, j + 1]);
-                        }
-                    }
-
-                    if(i < w - 1)
-                    {
-                        cell.SetNeighbour(HexDirection.E, _cellsField[i + 1, j]);
-                    }
-                }
-            }
+            SetupNeighbours();
 
             for (int i = 0; i < landscapeFreq; i++)
             {
@@ -91,6 +65,38 @@ namespace Bleysortis.Main
         public IEnumerable<BaseObject> EnumerateItems()
         {
             return _items;
+        }
+
+        private void SetupNeighbours()
+        {
+            int w = _cellsField.GetLength(0);
+            int h = _cellsField.GetLength(1);
+            for (int i = 0; i < w; i++)
+            {
+                for (int j = 0; j < h; j++)
+                {
+                    var cell = _cellsField[i, j];
+                    if (j < h - 1)
+                    {
+                        int i0 = j % 2 == 0 ? i + 1 : i;
+                        if (i0 < w)
+                        {
+                            cell.SetNeighbour(HexDirection.NE, _cellsField[i0, j + 1]);
+                        }
+
+                        int i1 = (j % 2 == 0 ? i : i - 1);
+                        if (i1 >= 0)
+                        {
+                            cell.SetNeighbour(HexDirection.NW, _cellsField[i1, j + 1]);
+                        }
+                    }
+
+                    if (i < w - 1)
+                    {
+                        cell.SetNeighbour(HexDirection.E, _cellsField[i + 1, j]);
+                    }
+                }
+            }
         }
 
         private static void AddMountain(Cell[,] field, int zeroLvl, int topLvl, int velocity, Random rnd)

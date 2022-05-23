@@ -1,4 +1,5 @@
 ﻿using OpenTK;
+using System.Linq;
 
 namespace Bleysortis.Main
 {
@@ -7,6 +8,7 @@ namespace Bleysortis.Main
         public Vector3[] Points { get; }
         public Vector3[] Normales { get; private set; }
         public Color[] Colors { get; private set; }
+        public bool Transparent { get; private set; }
 
         public Triangle(Vector3 point1, Vector3 point2, Vector3 point3)
         {
@@ -24,6 +26,7 @@ namespace Bleysortis.Main
         public Triangle SetColor(Color color)
         {
             Colors = new[] { color };
+            Transparent = color.A != 255;
             return this;
         }
 
@@ -42,6 +45,7 @@ namespace Bleysortis.Main
         public Triangle SetColors(Color color1, Color color2, Color color3)
         {
             Colors = new[] { color1, color2, color3 };
+            Transparent = Colors.Any(c => c.A != 255);
             return this;
         }
 
